@@ -17,6 +17,7 @@
 #include <math.h>
 #include <ifaddrs.h>
 #include <net/if.h>
+#include <fcntl.h>
 #include "ledscape.h"
 
 #define min(a, b) ((a) < (b) ? (a) : (b))
@@ -33,6 +34,9 @@ int pixelsPerStrand = DEFAULT_MAX_PIXELS;
 bool receivedSegArr[MAX_SUPPORTED_SEGMENTS] = {false};
 uint32_t currentFrame = 0;
 uint32_t numOfReceivedSegments = 0;
+
+// framerate protection
+bool fullFrameReady = false;
 
 // LedScape things
 ledscape_t *leds = NULL;
@@ -59,28 +63,39 @@ void SendColorsToStrips()
 {
 	// Wait for previous send to complete if still in progress
 	ledscape_wait(leds);
+	
+	// the following line is critical for the leds to have proper display.
+	// if it is absent, the leds does not operate well if draw imidiately one after the other
+	// I don't know why, but suspect it has to do with the ws2812 reset time
+	// not being handled correctly by the pru code.
+	// TODO: dig into the pru code and understand why
+	usleep(1e2 /* 100us */);
+	
 	// Send the frame to the PRU
 	ledscape_draw(leds, buffer_index);
 	
 	ChangeLedScapeBuffers();
+	fullFrameReady = false;
 }
 
 void SetAllSameColor(uint8_t r, uint8_t g, uint8_t b) {
-	for(int s = 0; s < LEDSCAPE_NUM_STRIPS; s++) {		
-		for(int i=0; i<pixelsPerStrand; i++)
-		{
-			ledscape_set_color(
-				frame,
-				COLOR_ORDER_BRG,
-				s,
-				i,
-				r,
-				g,
-				b
-			);
-		}	
+	for(int i=0; i<3; i++) {
+		for(int s = 0; s < LEDSCAPE_NUM_STRIPS; s++) {		
+			for(int i=0; i<pixelsPerStrand; i++)
+			{
+				ledscape_set_color(
+					frame,
+					COLOR_ORDER_BRG,
+					s,
+					i,
+					r,
+					g,
+					b
+				);
+			}	
+		}
+		SendColorsToStrips();	
 	}
-	SendColorsToStrips();	
 }
 
 void StartLedScape()
@@ -100,10 +115,11 @@ void StartLedScape()
 
 void ResetCounter(uint32_t newFrameId)
 {
-  currentFrame = newFrameId;
-  numOfReceivedSegments = 0;
-  for(int i=0; i<MAX_SUPPORTED_SEGMENTS; i++)
-    receivedSegArr[i] = false;  
+  	currentFrame = newFrameId;
+  	numOfReceivedSegments = 0;
+  	for(int i=0; i<MAX_SUPPORTED_SEGMENTS; i++) {
+    	receivedSegArr[i] = false;  
+	}
 }
 
 bool VerifyLedBurnPacket(const uint8_t packetBuf[], int packetSize)
@@ -162,7 +178,6 @@ bool BeforePaintLeds(const PacketHeaderData *phd)
   ResetCounter(phd->frameId);
   SendColorsToStrips(); // use the leds we already recived
 	SetAllSameColor(0, 0, 0);
-	SetAllSameColor(0, 0, 0);
   return true;
 }
 
@@ -205,8 +220,8 @@ void AfterPaintLeds(const PacketHeaderData *phd)
 
   if(numOfReceivedSegments >= phd->segInFrame)
   {
-    ResetCounter(phd->frameId + 1);
-    SendColorsToStrips();
+  	ResetCounter(currentFrame + 1);
+  	fullFrameReady = true;
   }
 }
 
@@ -215,9 +230,15 @@ void MainLoop()
 	printf("Initialize udp listen socket\n");
 	
 	const int sock = socket(AF_INET6, SOCK_DGRAM, 0);
-
-	if (sock < 0)
+	if (sock < 0) {
 		die("[udp] socket failed: %s\n", strerror(errno));
+	}
+
+	// set the socket to non bloking.
+	int flags = fcntl(sock,F_GETFL);
+	flags |= O_NONBLOCK;
+	fcntl(sock, F_SETFL, flags);
+
 
 	struct sockaddr_in6 addr;
 	bzero(&addr, sizeof(addr));
@@ -240,6 +261,12 @@ void MainLoop()
 	for(;;) {
 		
 		const ssize_t rc = recv(sock, buf, sizeof(buf), 0);
+		if(rc < 0 && (errno == EAGAIN || errno == EWOULDBLOCK)) {
+			if(fullFrameReady == true && !is_ledscape_busy(leds)) {
+		    	SendColorsToStrips();
+		    }
+			continue;			
+		}
 		if (rc < 0) {
 			fprintf(stderr, "[udp] recv failed: %s\n", strerror(errno));
 			continue;
@@ -271,7 +298,6 @@ void PlayInitSequence() {
 	usleep(1000 * 1000);
 	SetAllSameColor(0, 0, 255);
 	usleep(1000 * 1000);
-	SetAllSameColor(0, 0, 0);
 	SetAllSameColor(0, 0, 0);
 }
 

@@ -9,6 +9,7 @@
 #define _ledscape_h_
 
 #include <stdint.h>
+#include <stdbool.h>
 #include "pru.h"
 
 /** The number of strips supported.
@@ -155,6 +156,11 @@ inline void ledscape_set_color(
 
 extern void
 ledscape_wait(
+	ledscape_t * const leds
+);
+
+extern bool
+is_ledscape_busy(
 	ledscape_t * const leds
 );
 

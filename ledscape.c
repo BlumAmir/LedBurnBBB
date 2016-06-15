@@ -104,6 +104,10 @@ ledscape_draw(
 	leds->ws281x_1->command = 1;
 }
 
+bool
+is_ledscape_busy(ledscape_t * const leds) {
+	return !(leds->ws281x_0->response && leds->ws281x_1->response);
+}
 
 /** Wait for the current frame to finish transfering to the strips.
  * \returns a token indicating the response code.
