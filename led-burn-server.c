@@ -65,14 +65,32 @@ void SendColorsToStrips()
 	ChangeLedScapeBuffers();
 }
 
+void SetAllSameColor(uint8_t r, uint8_t g, uint8_t b) {
+	for(int s = 0; s < LEDSCAPE_NUM_STRIPS; s++) {		
+		for(int i=0; i<pixelsPerStrand; i++)
+		{
+			ledscape_set_color(
+				frame,
+				COLOR_ORDER_BRG,
+				s,
+				i,
+				r,
+				g,
+				b
+			);
+		}	
+	}
+	SendColorsToStrips();	
+}
+
 void StartLedScape()
 {
 	printf("[main] Starting LEDscape...\n");
 
 	leds = ledscape_init_with_programs(
 		pixelsPerStrand,
-		"pru/bin/ws281x-rgb-123-v3-pru0.bin",
-		"pru/bin/ws281x-rgb-123-v3-pru1.bin"
+		"pru/bin/ws281x-come-million-box-pru0.bin",
+		"pru/bin/ws281x-come-million-box-pru1.bin"
 	);		
 	
 	ChangeLedScapeBuffers();
@@ -140,8 +158,11 @@ bool BeforePaintLeds(const PacketHeaderData *phd)
 
   // if we are here, then this frame is not what we expected, but it is not frame from udp re-order.
   // so we change our reference point to it!
+  printf("info: new frame reference point detected. old frame id: %u. new frame id: %u. diff: %" PRId64 "\n", currentFrame, phd->frameId, diffFromCurrent);
   ResetCounter(phd->frameId);
   SendColorsToStrips(); // use the leds we already recived
+	SetAllSameColor(0, 0, 0);
+	SetAllSameColor(0, 0, 0);
   return true;
 }
 
@@ -243,24 +264,6 @@ void MainLoop()
 	ledscape_close(leds);
 }
 
-void SetAllSameColor(uint8_t r, uint8_t g, uint8_t b) {
-	for(int s = 0; s < LEDSCAPE_NUM_STRIPS; s++) {		
-		for(int i=0; i<pixelsPerStrand; i++)
-		{
-			ledscape_set_color(
-				frame,
-				COLOR_ORDER_BRG,
-				s,
-				i,
-				r,
-				g,
-				b
-			);
-		}	
-	}
-	SendColorsToStrips();	
-}
-
 void PlayInitSequence() {
 	SetAllSameColor(255, 0, 0);
 	usleep(1000 * 1000);
@@ -268,6 +271,7 @@ void PlayInitSequence() {
 	usleep(1000 * 1000);
 	SetAllSameColor(0, 0, 255);
 	usleep(1000 * 1000);
+	SetAllSameColor(0, 0, 0);
 	SetAllSameColor(0, 0, 0);
 }
 
