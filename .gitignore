@@ -2,6 +2,7 @@
 .*.swo
 *.i
 *.o
+*.so
 *.a
 *.bin
 pcb/*.b[^r][^d]
@@ -14,6 +15,7 @@ am335x/pasm/pasm
 a.out
 .idea
 opc-server
+led-burn-server
 pru/generated
 pru/bin
 ledscape.service

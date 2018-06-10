@@ -2,15 +2,15 @@
 #
 # The top level targets link in the two .o files for now.
 #
-TARGETS += opc-server
+TARGETS += led-burn-server
 
-LEDSCAPE_OBJS = ledscape.o pru.o util.o lib/cesanta/frozen.o lib/cesanta/mongoose.o
+LEDSCAPE_OBJS = ledscape.o pru.o util.o
 LEDSCAPE_LIB := libledscape.a
 
 PRU_TEMPLATES := $(wildcard pru/templates/*.p)
 EXPANDED_PRU_TEMPLATES := $(addprefix pru/generated/, $(notdir $(PRU_TEMPLATES:.p=.template)))
 
-all: $(TARGETS) all_pru_templates ledscape.service
+all: $(TARGETS) all_pru_templates ledburn.service
 
 ifeq ($(shell uname -m),armv7l)
 # We are on the BeagleBone Black itself;
@@ -30,9 +30,8 @@ CFLAGS += \
 	-std=c99 \
 	-W \
 	-Wall \
-	-D_DEFAULT_SOURCE \
-  -D_BSD_SOURCE \
- 	-Wp,-MMD,$(dir $@).$(notdir $@).d \
+	-D_BSD_SOURCE \
+	-Wp,-MMD,$(dir $@).$(notdir $@).d \
 	-Wp,-MT,$@ \
 	-I. \
 	-O2  -g \
@@ -46,9 +45,6 @@ CFLAGS += \
 	-Wno-unknown-pragmas
 
 LDFLAGS += \
-
-LDLIBS += \
-	-lpthread \
 
 COMPILE.o = $(CROSS_COMPILE)gcc $(CFLAGS) -c -o $@ $<
 COMPILE.a = $(CROSS_COMPILE)ar crv $@ $^
@@ -103,8 +99,8 @@ $(foreach O,$(TARGETS),$(eval $O: $O.o $(LEDSCAPE_OBJS) $(APP_LOADER_LIB)))
 $(TARGETS):
 	$(COMPILE.link)
 
-ledscape.service: ledscape.service.in
-	sed 's%LEDSCAPE_PATH%'`pwd`'%' ledscape.service.in > ledscape.service
+ledburn.service: ledburn.service.in
+	sed 's%LEDSCAPE_PATH%'`pwd`'%' ledburn.service.in > ledburn.service
 
 .PHONY: clean
 
@@ -122,7 +118,7 @@ clean:
 		lib/cesanta/*.o \
 		pru/generated \
 		pru/bin \
-		ledscape.service
+		ledburn.service
 	cd am335x/app_loader/interface && $(MAKE) clean
 	cd am335x/pasm && $(MAKE) clean
 
