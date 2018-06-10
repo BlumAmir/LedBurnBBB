@@ -31,7 +31,8 @@ CFLAGS += \
 	-W \
 	-Wall \
 	-D_DEFAULT_SOURCE \
-	-Wp,-MMD,$(dir $@).$(notdir $@).d \
+  -D_BSD_SOURCE \
+ 	-Wp,-MMD,$(dir $@).$(notdir $@).d \
 	-Wp,-MT,$@ \
 	-I. \
 	-O2  -g \
