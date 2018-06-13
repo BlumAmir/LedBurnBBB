@@ -18,6 +18,6 @@ opc-server
 led-burn-server
 pru/generated
 pru/bin
-ledscape.service
+ledburn.service
 .idea
 *.iml

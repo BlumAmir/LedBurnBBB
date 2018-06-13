@@ -1,0 +1,10 @@
+[Unit]
+Description=LED burn UDP Receiver
+
+[Service]
+WorkingDirectory=LEDSCAPE_PATH/
+ExecStart=LEDSCAPE_PATH/run-ledburn
+KillMode=control-group
+
+[Install]
+WantedBy=multi-user.target
