@@ -49,27 +49,6 @@ typedef struct PacketHeaderData
   uint16_t numOfPixels; // this is not actually header data, but it's nice to have it here
 } PacketHeaderData;
 
-void StartLedScape()
-{
-	printf("[main] Starting LEDscape...\n");
-
-	leds = ledscape_init_with_programs(
-		pixelsPerStrand,
-		"pru/bin/ws281x-rgb-123-v3-pru0.bin",
-		"pru/bin/ws281x-rgb-123-v3-pru1.bin"
-	);		
-
-	printf("[main] Done Starting LEDscape...\n");	
-}
-
-void ResetCounter(uint32_t newFrameId)
-{
-  currentFrame = newFrameId;
-  numOfReceivedSegments = 0;
-  for(int i=0; i<MAX_SUPPORTED_SEGMENTS; i++)
-    receivedSegArr[i] = false;  
-}
-
 void ChangeLedScapeBuffers()
 {
 	buffer_index = (buffer_index+1)%2;
@@ -84,6 +63,29 @@ void SendColorsToStrips()
 	ledscape_draw(leds, buffer_index);
 	
 	ChangeLedScapeBuffers();
+}
+
+void StartLedScape()
+{
+	printf("[main] Starting LEDscape...\n");
+
+	leds = ledscape_init_with_programs(
+		pixelsPerStrand,
+		"pru/bin/ws281x-rgb-123-v3-pru0.bin",
+		"pru/bin/ws281x-rgb-123-v3-pru1.bin"
+	);		
+	
+	ChangeLedScapeBuffers();
+
+	printf("[main] Done Starting LEDscape...\n");	
+}
+
+void ResetCounter(uint32_t newFrameId)
+{
+  currentFrame = newFrameId;
+  numOfReceivedSegments = 0;
+  for(int i=0; i<MAX_SUPPORTED_SEGMENTS; i++)
+    receivedSegArr[i] = false;  
 }
 
 bool VerifyLedBurnPacket(const uint8_t packetBuf[], int packetSize)
@@ -241,6 +243,34 @@ void MainLoop()
 	ledscape_close(leds);
 }
 
+void SetAllSameColor(uint8_t r, uint8_t g, uint8_t b) {
+	for(int s = 0; s < LEDSCAPE_NUM_STRIPS; s++) {		
+		for(int i=0; i<pixelsPerStrand; i++)
+		{
+			ledscape_set_color(
+				frame,
+				COLOR_ORDER_BRG,
+				s,
+				i,
+				r,
+				g,
+				b
+			);
+		}	
+	}
+	SendColorsToStrips();	
+}
+
+void PlayInitSequence() {
+	SetAllSameColor(255, 0, 0);
+	usleep(1000 * 1000);
+	SetAllSameColor(0, 255, 0);
+	usleep(1000 * 1000);
+	SetAllSameColor(0, 0, 255);
+	usleep(1000 * 1000);
+	SetAllSameColor(0, 0, 0);
+}
+
 void SetNumberOfPixelsInStrand(int argc, char ** argv) {
 	if(argc > 1) {
 		char *endPtr;
@@ -278,5 +308,6 @@ int main(int argc, char ** argv)
 {
 	SetNumberOfPixelsInStrand(argc, argv);
 	StartLedScape();
+	PlayInitSequence();
 	MainLoop();
 }
