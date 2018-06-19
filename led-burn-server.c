@@ -5,6 +5,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
+#include <limits.h>
 #include <stdint.h>
 #include <ctype.h>
 #include <stdbool.h>
@@ -20,8 +21,11 @@
 
 #define min(a, b) ((a) < (b) ? (a) : (b))
 
-#define MAX_PIXELS 600
+#define MAX_SUPPORTED_PIXELS_PER_STRAND 1500
+#define DEFAULT_MAX_PIXELS 600
 #define LB_HEADER_SIZE (8+8+8)
+
+int pixelsPerStrand = DEFAULT_MAX_PIXELS;
 
 // we support up to 4096 segments, or 64 segments per strip if all strips are used, which is 10 pixels per packet.
 // this is more than enough
@@ -50,7 +54,7 @@ void StartLedScape()
 	printf("[main] Starting LEDscape...\n");
 
 	leds = ledscape_init_with_programs(
-		MAX_PIXELS,
+		pixelsPerStrand,
 		"pru/bin/ws281x-rgb-123-v3-pru0.bin",
 		"pru/bin/ws281x-rgb-123-v3-pru1.bin"
 	);		
@@ -144,9 +148,9 @@ void PaintLeds(const uint8_t packetBuf[], const PacketHeaderData *phd)
 	// avoid overrun the allowed buffer
 	if(phd->stripId >= LEDSCAPE_NUM_STRIPS)
 		return;
-	if(phd->pixelId >= MAX_PIXELS)
+	if(phd->pixelId >= pixelsPerStrand)
 		return;
-	int numOfPixels = min(phd->numOfPixels, (uint16_t)(MAX_PIXELS - phd->pixelId) ); // MAX_PIXELS - phd.pixelId > 0
+	int numOfPixels = min(phd->numOfPixels, (uint16_t)(pixelsPerStrand - phd->pixelId) ); // pixelsPerStrand - phd.pixelId > 0
 
 	const uint8_t *bufStartPointer = (const uint8_t *)packetBuf + LB_HEADER_SIZE;
 
@@ -237,9 +241,42 @@ void MainLoop()
 	ledscape_close(leds);
 }
 
+void SetNumberOfPixelsInStrand(int argc, char ** argv) {
+	if(argc > 1) {
+		char *endPtr;
+		errno = 0; /* To distinguish success/failure after call */
+		long numberOfPixels = strtol(argv[1], &endPtr, 10);\
+		
+		// check non integer values
+		if(endPtr == argv[1] || *endPtr != '\0') {
+			fprintf(stderr, "first parameter to the ledburn server should be number of pixels. received non integer value: '%s'\n", argv[1]);
+			exit(EXIT_FAILURE);
+		}
+		
+		// check out of range
+		if ((errno == ERANGE && (numberOfPixels == LONG_MAX || numberOfPixels == LONG_MIN)) || (errno != 0 && numberOfPixels == 0)) {
+			fprintf(stderr, "first parameter to the ledburn server should be number of pixels. received invalid value: %s\n", argv[1]);
+			exit(EXIT_FAILURE);
+		}
+		
+		// check if value is not reasonable
+
+		if(numberOfPixels > MAX_SUPPORTED_PIXELS_PER_STRAND || numberOfPixels <= 0) {
+			fprintf(stderr, "number of pixels from command line argument is not supported. value should be between [1, %d]. received: %ld\n", MAX_SUPPORTED_PIXELS_PER_STRAND, numberOfPixels);
+			exit(EXIT_FAILURE);			
+		}
+		
+		pixelsPerStrand = numberOfPixels;
+		printf("pixels per strand set from command line argument to = %d\n", pixelsPerStrand);
+	}
+	else {
+		printf("pixels per strand not set from command line argument. using default value %d\n", pixelsPerStrand);
+	}
+}
+
 int main(int argc, char ** argv)
 {
-	argc = argc; argv = argv;
+	SetNumberOfPixelsInStrand(argc, argv);
 	StartLedScape();
 	MainLoop();
 }
