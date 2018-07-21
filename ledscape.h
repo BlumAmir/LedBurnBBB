@@ -90,7 +90,7 @@ ledscape_draw(
 	unsigned frame
 );
 
-inline void ledscape_pixel_set_color(
+/*inline void ledscape_pixel_set_color(
 	ledscape_pixel_t * const out_pixel,
 	color_channel_order_t color_channel_order,
 	uint8_t r,
@@ -122,7 +122,7 @@ inline void ledscape_pixel_set_color(
 			out_pixel->c = r;
 		break;
 
-		case COLOR_ORDER_BGR:
+		case COLOR_ORDER_BGR:0
 			out_pixel->a = b;
 			out_pixel->b = g;
 			out_pixel->c = r;
@@ -134,7 +134,7 @@ inline void ledscape_pixel_set_color(
 			out_pixel->c = g;
 		break;
 	}
-}
+}*/
 
 inline void ledscape_set_color(
 	ledscape_frame_t * const frame,
@@ -145,13 +145,18 @@ inline void ledscape_set_color(
 	uint8_t g,
 	uint8_t b
 ) {
-	ledscape_pixel_set_color(
+	(void)color_channel_order;
+	ledscape_pixel_t * const out_pixel = &frame[pixel].strip[strip];
+	out_pixel->a = b;	
+	out_pixel->b = g;
+	out_pixel->c = r;
+	/*ledscape_pixel_set_color(
 		&frame[pixel].strip[strip],
 		color_channel_order,
 		r,
 		g,
 		b
-	);
+	);*/
 }
 
 extern void

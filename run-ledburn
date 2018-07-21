@@ -9,4 +9,4 @@ cd "$DIRNAME"
 modprobe uio_pruss
 #./opc-server -P 7890 -s 48 -c 64
 #./opc-server --config /etc/ledscape-config.json
-./led-burn-server
+./led-burn-server 251

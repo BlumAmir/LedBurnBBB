@@ -177,7 +177,10 @@ bool BeforePaintLeds(const PacketHeaderData *phd)
   printf("info: new frame reference point detected. old frame id: %u. new frame id: %u. diff: %" PRId64 "\n", currentFrame, phd->frameId, diffFromCurrent);
   ResetCounter(phd->frameId);
   SendColorsToStrips(); // use the leds we already recived
-	SetAllSameColor(0, 0, 0);
+
+  if(diffFromCurrent < -500 || diffFromCurrent > 500) {
+  	SetAllSameColor(0, 0, 0);
+  }
   return true;
 }
 

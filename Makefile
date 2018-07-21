@@ -42,6 +42,7 @@ CFLAGS += \
 	-DNS_ENABLE_IPV6 \
 	-Wsign-compare \
 	-Werror \
+	-Wno-unused-parameter \
 	-Wno-unknown-pragmas
 
 LDFLAGS += \
